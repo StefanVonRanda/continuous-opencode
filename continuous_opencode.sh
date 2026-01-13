@@ -623,7 +623,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ "$1" == "update" ]]; then
+if [[ "${1:-}" == "update" ]]; then
     check_for_updates
     exit 0
 fi
