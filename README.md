@@ -24,7 +24,7 @@ This is an adaptation of [Continuous Claude](https://github.com/AnandChowdhary/c
 
 ```bash
 # Install via script
-curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/architect/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/install.sh | bash
 
 # Or manually
 chmod +x continuous_opencode.sh

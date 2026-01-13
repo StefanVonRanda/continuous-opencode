@@ -522,11 +522,11 @@ list_worktrees() {
 check_for_updates() {
     echo "🔄 Checking for updates..."
     local latest_version
-    latest_version=$(curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/architect/main/continuous_opencode.sh | grep "CONTINUOUS_OPENCODE_VERSION=" | cut -d'"' -f2)
+    latest_version=$(curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/continuous_opencode.sh | grep "CONTINUOUS_OPENCODE_VERSION=" | cut -d'"' -f2)
 
     if [[ -n "$latest_version" && "$latest_version" != "$CONTINUOUS_OPENCODE_VERSION" ]]; then
         echo "📦 New version available: $latest_version (current: $CONTINUOUS_OPENCODE_VERSION})"
-        echo "   Run 'curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/architect/main/install.sh | bash' to update"
+        echo "   Run 'curl -fsSL https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/install.sh | bash' to update"
     else
         echo "✅ You're on the latest version"
     fi

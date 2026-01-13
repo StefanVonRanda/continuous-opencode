@@ -3,8 +3,8 @@ set -euo pipefail
 
 VERSION="0.1.0"
 INSTALL_DIR="${HOME}/.local/bin"
-SCRIPT_URL="https://raw.githubusercontent.com/StefanVonRanda/architect/main/continuous_opencode.sh"
-SCRIPT_SHA256_URL="https://raw.githubusercontent.com/StefanVonRanda/architect/main/continuous_opencode.sh.sha256"
+SCRIPT_URL="https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/continuous_opencode.sh"
+SCRIPT_SHA256_URL="https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/continuous_opencode.sh.sha256"
 
 echo "🚀 Installing Continuous OpenCode v${VERSION}..."
 
