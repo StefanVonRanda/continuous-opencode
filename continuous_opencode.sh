@@ -232,11 +232,28 @@ run_opencode() {
         cmd="opencode run ${OPENCODE_ARGS[*]} -- \"$prompt\""
     fi
 
-    echo "   Running: opencode $prompt"
+    echo "   Running: opencode..."
 
-    local output
+    local spinner=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local spin_idx=0
+    local output_file=$(mktemp)
+    
     local exit_code
-    output=$(eval "$cmd" 2>&1) || exit_code=$?
+    (eval "$cmd" >"$output_file" 2>&1) &
+    local pid=$!
+    
+    while kill -0 $pid 2>/dev/null; do
+        printf "\r   ${spinner[$spin_idx]} Running OpenCode..."
+        spin_idx=$(( (spin_idx + 1) % 10 ))
+        sleep 0.1
+    done
+    printf "\r   ✅ OpenCode finished\n"
+    
+    wait $pid || exit_code=$?
+    
+    local output
+    output=$(cat "$output_file")
+    rm -f "$output_file"
 
     SHARE_LINK=$(echo "$output" | grep -oE 'https://opncd\.ai/s/[a-zA-Z0-9]+' || true)
 
