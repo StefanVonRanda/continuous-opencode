@@ -25,6 +25,7 @@ OWNER=""
 REPO=""
 PROMPT=""
 COMPLETION_SIGNAL_COUNT=0
+HAS_GITHUB_REMOTE=false
 OPENCODE_ARGS=()
 OPENCODE_SERVER_PID=""
 OPENCODE_SERVER_URL=""
@@ -94,6 +95,7 @@ detect_git_remote() {
             if [[ "$remote_url" =~ github\.com[/:]([^/]+)/([^/\.]+) ]]; then
                 OWNER="${OWNER:-${BASH_REMATCH[1]}}"
                 REPO="${REPO:-${BASH_REMATCH[2]%%.git}}"
+                HAS_GITHUB_REMOTE=true
             fi
         fi
     fi
@@ -460,7 +462,12 @@ run_iteration() {
     ITERATION_COUNT=$((ITERATION_COUNT + 1))
     echo "🔄 ($ITERATION_COUNT) Starting iteration..."
 
-    if [[ "$DISABLE_BRANCHES" == false ]]; then
+    local skip_branching=false
+    if [[ "$DISABLE_BRANCHES" == true || "$HAS_GITHUB_REMOTE" == false ]]; then
+        skip_branching=true
+    fi
+
+    if [[ "$skip_branching" == false ]]; then
         BRANCH_NAME=$(create_branch)
         echo "🌿 Creating branch: $BRANCH_NAME"
 
@@ -470,21 +477,21 @@ run_iteration() {
     fi
 
     local enhanced_prompt="This is part of a continuous development loop with OpenCode.
-You don't need to complete the entire goal in one iteration - just make meaningful progress on one thing.
-Leave clear notes in $NOTES_FILE for the next iteration.
+ You don't need to complete the entire goal in one iteration - just make meaningful progress on one thing.
+ Leave clear notes in $NOTES_FILE for the next iteration.
 
-$PROMPT"
+ $PROMPT"
 
-    run_opencode "$enhanced_prompt" "$BRANCH_NAME"
+    run_opencode "$enhanced_prompt" "${BRANCH_NAME:-}"
 
     if [[ $? -ne 0 && ! "$DRY_RUN" ]]; then
         echo "⚠️  OpenCode encountered an error"
     fi
 
     run_reviewer
-    commit_changes "$BRANCH_NAME"
+    commit_changes "${BRANCH_NAME:-}"
 
-    if [[ "$DISABLE_BRANCHES" == false ]]; then
+    if [[ "$skip_branching" == false ]]; then
         if push_and_create_pr "$BRANCH_NAME"; then
             if wait_for_pr_checks; then
                 merge_pr
