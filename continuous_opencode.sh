@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOTES_FILE="AGENTS.md"
 COMPLETION_SIGNAL="CONTINUOUS_OPENCODE_PROJECT_COMPLETE"
 COMPLETION_THRESHOLD=3
+NO_CHANGES_THRESHOLD=3
 ITERATION_COUNT=0
 TOTAL_COST=0
 START_TIME=$(date +%s)
@@ -25,6 +26,7 @@ OWNER=""
 REPO=""
 PROMPT=""
 COMPLETION_SIGNAL_COUNT=0
+NO_CHANGES_COUNT=0
 HAS_GITHUB_REMOTE=false
 OPENCODE_ARGS=()
 OPENCODE_SERVER_PID=""
@@ -60,6 +62,7 @@ FLAGS:
         --dry-run                    Simulate execution without making changes
         --completion-signal <phrase>  Phrase that signals project completion (default: CONTINUOUS_OPENCODE_PROJECT_COMPLETE)
         --completion-threshold <num>  Number of completion signals required to stop (default: 3)
+        --no-changes-threshold <num>  Consecutive iterations without changes to stop (default: 3)
     -r, --review-prompt <prompt>     Run reviewer pass after each iteration
         update                       Check for and install updates
 
@@ -138,6 +141,10 @@ should_continue() {
         if [[ "$elapsed" -ge "$MAX_DURATION" ]]; then
             return 1
         fi
+    fi
+
+    if [[ "$NO_CHANGES_COUNT" -ge "$NO_CHANGES_THRESHOLD" ]]; then
+        return 1
     fi
 
     return 0
@@ -315,6 +322,7 @@ commit_changes() {
     echo "💬 Committing changes..."
 
     if ! git diff --quiet; then
+        NO_CHANGES_COUNT=0
         if [[ "$DRY_RUN" == true ]]; then
             echo "   [DRY RUN] Would commit changes"
             return 0
@@ -324,7 +332,8 @@ commit_changes() {
         git commit -m "OpenCode iteration $((ITERATION_COUNT + 1))" -m "Prompt: $PROMPT"
         echo "   ✅ Changes committed"
     else
-        echo "   ℹ️  No changes to commit"
+        NO_CHANGES_COUNT=$((NO_CHANGES_COUNT + 1))
+        echo "   ℹ️  No changes to commit ($NO_CHANGES_COUNT/$NO_CHANGES_THRESHOLD consecutive)"
     fi
 }
 
@@ -626,6 +635,10 @@ while [[ $# -gt 0 ]]; do
             COMPLETION_THRESHOLD="$2"
             shift 2
             ;;
+        --no-changes-threshold)
+            NO_CHANGES_THRESHOLD="$2"
+            shift 2
+            ;;
         -r|--review-prompt)
             REVIEW_PROMPT="$2"
             shift 2
@@ -700,6 +713,11 @@ while should_continue; do
 
     if [[ "$COMPLETION_SIGNAL_COUNT" -ge "$COMPLETION_THRESHOLD" ]]; then
         echo "🎉 Project completion threshold reached!"
+        break
+    fi
+
+    if [[ "$NO_CHANGES_COUNT" -ge "$NO_CHANGES_THRESHOLD" ]]; then
+        echo "🛑 No changes threshold reached ($NO_CHANGES_THRESHOLD consecutive iterations)"
         break
     fi
 
