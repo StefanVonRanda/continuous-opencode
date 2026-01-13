@@ -98,13 +98,11 @@ detect_git_remote() {
         fi
     fi
 
-    if [[ -z "$OWNER" || -z "$REPO" ]]; then
-        echo "❌ Error: Could not auto-detect GitHub owner/repo from git remote"
-        echo "   Please specify --owner and --repo explicitly"
-        exit 1
+    if [[ -n "$OWNER" && -n "$REPO" ]]; then
+        echo "📦 Repository: ${OWNER}/${REPO}"
+    else
+        echo "📦 Local repository (no GitHub remote detected)"
     fi
-
-    echo "📦 Repository: ${OWNER}/${REPO}"
 }
 
 parse_duration() {
