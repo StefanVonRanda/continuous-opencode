@@ -1,11 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
-CONTINUOUS_OPENCODE_VERSION="0.3.0"
+CONTINUOUS_OPENCODE_VERSION="0.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOTES_FILE="AGENTS.md"
 COMPLETION_SIGNAL="CONTINUOUS_OPENCODE_PROJECT_COMPLETE"
-COMPLETION_THRESHOLD=3
+COMPLETION_THRESHOLD=1
 NO_CHANGES_THRESHOLD=3
 ITERATION_COUNT=0
 TOTAL_COST=0
@@ -27,6 +27,7 @@ REPO=""
 PROMPT=""
 COMPLETION_SIGNAL_COUNT=0
 NO_CHANGES_COUNT=0
+HAS_MADE_COMMIT=false
 HAS_GITHUB_REMOTE=false
 OPENCODE_ARGS=()
 OPENCODE_SERVER_PID=""
@@ -385,6 +386,7 @@ commit_changes() {
 
         git add -A
         git commit -m "OpenCode iteration $((ITERATION_COUNT + 1))" -m "Prompt: $PROMPT"
+        HAS_MADE_COMMIT=true
         echo "   ✅ Changes committed"
     else
         NO_CHANGES_COUNT=$((NO_CHANGES_COUNT + 1))
@@ -778,6 +780,11 @@ while should_continue; do
 
     if [[ "$COMPLETION_SIGNAL_COUNT" -ge "$COMPLETION_THRESHOLD" ]]; then
         echo "🎉 Project completion threshold reached!"
+        break
+    fi
+
+    if [[ "$HAS_MADE_COMMIT" == true ]]; then
+        echo "🎉 Changes committed - task complete"
         break
     fi
 

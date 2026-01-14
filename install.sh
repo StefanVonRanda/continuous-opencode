@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-VERSION="0.3.0"
+VERSION="0.4.0"
 INSTALL_DIR="${HOME}/.local/bin"
 SCRIPT_URL="https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/continuous_opencode.sh"
 SCRIPT_SHA256_URL="https://raw.githubusercontent.com/StefanVonRanda/continuous-opencode/main/continuous_opencode.sh.sha256"
