@@ -489,6 +489,13 @@ run_iteration() {
  You don't need to complete the entire goal in one iteration - just make meaningful progress on one thing.
  Leave clear notes in $NOTES_FILE for the next iteration.
 
+ Prioritize correctness above all else:
+ 1. Before committing, VERIFY your changes work correctly
+ 2. Find and RUN any existing test commands (e.g., npm test, pytest, cargo test, make test)
+ 3. If tests fail, fix them before continuing
+ 4. Run lint and typecheck commands if available (check AGENTS.md, README.md, or package.json)
+ 5. Test edge cases and verify behavior matches requirements
+
  When the entire task is COMPLETE and nothing more needs to be done, output this exact phrase:
  $COMPLETION_SIGNAL
 
