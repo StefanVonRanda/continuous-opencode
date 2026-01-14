@@ -489,6 +489,9 @@ run_iteration() {
  You don't need to complete the entire goal in one iteration - just make meaningful progress on one thing.
  Leave clear notes in $NOTES_FILE for the next iteration.
 
+ When the entire task is COMPLETE and nothing more needs to be done, output this exact phrase:
+ $COMPLETION_SIGNAL
+
  $PROMPT"
 
     run_opencode "$enhanced_prompt" "${BRANCH_NAME:-}"
