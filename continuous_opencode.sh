@@ -158,23 +158,29 @@ start_server() {
     echo "🚀 Starting OpenCode server..."
     local port=4096
     OPENCODE_SERVER_URL="http://localhost:${port}"
+    local server_log=$(mktemp)
 
     if [[ "$DRY_RUN" == true ]]; then
         echo "   [DRY RUN] Would start server on ${OPENCODE_SERVER_URL}"
         return 0
     fi
 
-    opencode serve --port "${port}" > /dev/null 2>&1 &
+    opencode serve --port "${port}" > "$server_log" 2>&1 &
     OPENCODE_SERVER_PID=$!
 
-    sleep 3
+    sleep 5
 
     if kill -0 "$OPENCODE_SERVER_PID" 2>/dev/null; then
         echo "   ✅ Server started (PID: ${OPENCODE_SERVER_PID})"
+        rm -f "$server_log"
     else
-        echo "   ⚠️  Server may not have started, continuing anyway"
+        echo "   ⚠️  Server failed to start"
+        echo "   💡 Server log:"
+        cat "$server_log" | sed 's/^/      /'
+        rm -f "$server_log"
         OPENCODE_SERVER_PID=""
         OPENCODE_SERVER_URL=""
+        echo "   💡 Continuing without server (slower iterations)"
     fi
 }
 
