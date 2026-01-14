@@ -150,6 +150,24 @@ should_continue() {
     return 0
 }
 
+find_available_port() {
+    local start_port=$1
+    local port=$start_port
+    local max_attempts=10
+    local attempts=0
+
+    while [[ $attempts -lt $max_attempts ]]; do
+        if ! lsof -ti :$port &>/dev/null; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+        attempts=$((attempts + 1))
+    done
+    echo ""
+    return 1
+}
+
 start_server() {
     if [[ "$DISABLE_COMMITS" == true ]]; then
         return 0
@@ -157,23 +175,47 @@ start_server() {
 
     echo "🚀 Starting OpenCode server..."
     local port=4096
-    OPENCODE_SERVER_URL="http://localhost:${port}"
-    local server_log=$(mktemp)
 
     if [[ "$DRY_RUN" == true ]]; then
+        OPENCODE_SERVER_URL="http://localhost:${port}"
         echo "   [DRY RUN] Would start server on ${OPENCODE_SERVER_URL}"
         return 0
     fi
 
-    opencode serve --port "${port}" > "$server_log" 2>&1 &
-    OPENCODE_SERVER_PID=$!
+    local server_log=$(mktemp)
+    local attempts=0
+    local max_attempts=10
 
-    sleep 5
+    while [[ $attempts -lt $max_attempts ]]; do
+        port=$(find_available_port "$port")
+        if [[ -z "$port" ]]; then
+            echo "   ❌ Could not find an available port"
+            rm -f "$server_log"
+            OPENCODE_SERVER_PID=""
+            OPENCODE_SERVER_URL=""
+            return 0
+        fi
 
-    if kill -0 "$OPENCODE_SERVER_PID" 2>/dev/null; then
-        echo "   ✅ Server started (PID: ${OPENCODE_SERVER_PID})"
-        rm -f "$server_log"
-    else
+        OPENCODE_SERVER_URL="http://localhost:${port}"
+        opencode serve --port "${port}" > "$server_log" 2>&1 &
+        OPENCODE_SERVER_PID=$!
+
+        sleep 5
+
+        if kill -0 "$OPENCODE_SERVER_PID" 2>/dev/null; then
+            echo "   ✅ Server started on port ${port} (PID: ${OPENCODE_SERVER_PID})"
+            rm -f "$server_log"
+            return 0
+        fi
+
+        if grep -q "Failed to start server on port" "$server_log"; then
+            echo "   ⚠️  Port ${port} is in use, trying next port..."
+            rm -f "$server_log"
+            port=$((port + 1))
+            attempts=$((attempts + 1))
+            continue
+        fi
+
         echo "   ⚠️  Server failed to start"
         echo "   💡 Server log:"
         cat "$server_log" | sed 's/^/      /'
@@ -181,7 +223,14 @@ start_server() {
         OPENCODE_SERVER_PID=""
         OPENCODE_SERVER_URL=""
         echo "   💡 Continuing without server (slower iterations)"
-    fi
+        return 0
+    done
+
+    echo "   ❌ Failed to start server after $max_attempts attempts"
+    rm -f "$server_log"
+    OPENCODE_SERVER_PID=""
+    OPENCODE_SERVER_URL=""
+    echo "   💡 Continuing without server (slower iterations)"
 }
 
 stop_server() {
