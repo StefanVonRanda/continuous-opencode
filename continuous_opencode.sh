@@ -377,7 +377,7 @@ commit_changes() {
 
     echo "💬 Committing changes..."
 
-    if ! git diff --quiet; then
+    if ! git diff --quiet || ! git diff --cached --quiet || [[ -n $(git ls-files --others --exclude-standard) ]]; then
         NO_CHANGES_COUNT=0
         if [[ "$DRY_RUN" == true ]]; then
             echo "   [DRY RUN] Would commit changes"
