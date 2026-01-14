@@ -236,9 +236,9 @@ run_opencode() {
 
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
-        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[*]} --share \"$prompt\""
+        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} --share \"$prompt\""
     else
-        cmd="opencode run ${OPENCODE_ARGS[*]} -- \"$prompt\""
+        cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"$prompt\""
     fi
 
     echo "   Running: opencode..."
@@ -294,9 +294,9 @@ run_reviewer() {
 
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
-        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[*]} -- \"$REVIEW_PROMPT\""
+        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} -- \"$REVIEW_PROMPT\""
     else
-        cmd="opencode run ${OPENCODE_ARGS[*]} -- \"$REVIEW_PROMPT\""
+        cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"$REVIEW_PROMPT\""
     fi
 
     echo "   Running: opencode $REVIEW_PROMPT"

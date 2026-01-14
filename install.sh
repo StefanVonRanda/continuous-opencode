@@ -14,7 +14,15 @@ if [[ ! -d "$INSTALL_DIR" ]]; then
 fi
 
 echo "📥 Downloading script..."
-curl -fsSL "$SCRIPT_URL" -o "${INSTALL_DIR}/cop"
+if command -v curl &>/dev/null; then
+    curl -fsSL "$SCRIPT_URL" -o "${INSTALL_DIR}/cop"
+elif command -v wget &>/dev/null; then
+    wget -q -O "${INSTALL_DIR}/cop" "$SCRIPT_URL"
+else
+    echo "❌ Error: Neither curl nor wget is installed"
+    echo "   Please install one of them to download the script"
+    exit 1
+fi
 chmod +x "${INSTALL_DIR}/cop"
 
 echo "✅ Installed to: ${INSTALL_DIR}/cop"
