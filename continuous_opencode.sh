@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONTINUOUS_OPENCODE_VERSION="0.6.0"
+CONTINUOUS_OPENCODE_VERSION="0.7.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOTES_FILE="AGENTS.md"
 COMPLETION_SIGNAL="CONTINUOUS_OPENCODE_PROJECT_COMPLETE"
@@ -168,7 +168,51 @@ find_available_port() {
     return 1
 }
 
+stop_server() {
+    if [[ -n "$OPENCODE_SERVER_PID" ]]; then
+        echo "🛑 Stopping OpenCode server..."
+        kill "$OPENCODE_SERVER_PID" 2>/dev/null || true
+        wait "$OPENCODE_SERVER_PID" 2>/dev/null || true
+        echo "   ✅ Server stopped"
+    fi
+}
+
+SERVER_RESTART_COUNT=0
+MAX_SERVER_RESTARTS=3
+
+check_server_health() {
+    if [[ -z "$OPENCODE_SERVER_PID" ]]; then
+        return 0
+    fi
+
+    if kill -0 "$OPENCODE_SERVER_PID" 2>/dev/null; then
+        return 0
+    fi
+
+    echo "⚠️  Server died (PID: $OPENCODE_SERVER_PID)"
+    OPENCODE_SERVER_PID=""
+    OPENCODE_SERVER_URL=""
+
+    if [[ $SERVER_RESTART_COUNT -ge $MAX_SERVER_RESTARTS ]]; then
+        echo "   💡 Server restart limit reached, continuing without server"
+        return 0
+    fi
+
+    echo "   🔄 Attempting to restart server..."
+    SERVER_RESTART_COUNT=$((SERVER_RESTART_COUNT + 1))
+
+    _start_server_internal
+}
+
+# Wrapper for start_server to track restart count
 start_server() {
+    if [[ -n "$OPENCODE_SERVER_PID" ]]; then
+        return 0
+    fi
+    _start_server_internal
+}
+
+_start_server_internal() {
     if [[ "$DISABLE_COMMITS" == true ]]; then
         return 0
     fi
@@ -233,15 +277,6 @@ start_server() {
     echo "   💡 Continuing without server (slower iterations)"
 }
 
-stop_server() {
-    if [[ -n "$OPENCODE_SERVER_PID" ]]; then
-        echo "🛑 Stopping OpenCode server..."
-        kill "$OPENCODE_SERVER_PID" 2>/dev/null || true
-        wait "$OPENCODE_SERVER_PID" 2>/dev/null || true
-        echo "   ✅ Server stopped"
-    fi
-}
-
 update_cost_tracking() {
     if [[ "$DISABLE_COMMITS" == true || -z "$OPENCODE_SERVER_URL" ]]; then
         return 0
@@ -288,6 +323,8 @@ run_opencode() {
         echo "   [DRY RUN] Would run: opencode $prompt"
         return 0
     fi
+
+    check_server_health
 
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
@@ -359,6 +396,8 @@ run_reviewer() {
         return 0
     fi
 
+    check_server_health
+
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
         cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} -- \"$REVIEW_PROMPT\""
@@ -385,6 +424,8 @@ check_completion() {
         echo "   [DRY RUN] Would check completion status and next steps"
         return 0
     fi
+
+    check_server_health
 
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
