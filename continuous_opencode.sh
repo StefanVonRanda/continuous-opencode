@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONTINUOUS_OPENCODE_VERSION="0.4.0"
+CONTINUOUS_OPENCODE_VERSION="0.5.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOTES_FILE="AGENTS.md"
 COMPLETION_SIGNAL="CONTINUOUS_OPENCODE_PROJECT_COMPLETE"
@@ -27,7 +27,6 @@ REPO=""
 PROMPT=""
 COMPLETION_SIGNAL_COUNT=0
 NO_CHANGES_COUNT=0
-HAS_MADE_COMMIT=false
 HAS_GITHUB_REMOTE=false
 OPENCODE_ARGS=()
 OPENCODE_SERVER_PID=""
@@ -379,6 +378,35 @@ run_reviewer() {
     update_cost_tracking
 }
 
+check_completion() {
+    echo "🔍 Checking if task is complete..."
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "   [DRY RUN] Would check completion status"
+        return 0
+    fi
+
+    local cmd
+    if [[ -n "$OPENCODE_SERVER_URL" ]]; then
+        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase. Is the original task complete? Answer only YES or NO at the very end of your response. Task: $PROMPT\""
+    else
+        cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase. Is the original task complete? Answer only YES or NO at the very end of your response. Task: $PROMPT\""
+    fi
+
+    local output
+    output=$(eval "$cmd" 2>&1) || true
+
+    if echo "$output" | grep -qiE "YES$|YES\.|YES,|YES!"; then
+        COMPLETION_SIGNAL_COUNT=$((COMPLETION_SIGNAL_COUNT + 1))
+        echo "   ✨ Task completion confirmed ($COMPLETION_SIGNAL_COUNT/$COMPLETION_THRESHOLD)"
+    else
+        COMPLETION_SIGNAL_COUNT=0
+        echo "   ℹ️  Task not complete, continuing..."
+    fi
+
+    update_cost_tracking
+}
+
 commit_changes() {
     local branch_name="$1"
 
@@ -398,7 +426,6 @@ commit_changes() {
 
         git add -A
         git commit -m "OpenCode iteration $((ITERATION_COUNT + 1))" -m "Prompt: $PROMPT"
-        HAS_MADE_COMMIT=true
         echo "   ✅ Changes committed"
     else
         NO_CHANGES_COUNT=$((NO_CHANGES_COUNT + 1))
@@ -790,13 +817,11 @@ while should_continue; do
     run_iteration
     echo ""
 
+    check_completion
+    echo ""
+
     if [[ "$COMPLETION_SIGNAL_COUNT" -ge "$COMPLETION_THRESHOLD" ]]; then
         echo "🎉 Project completion threshold reached!"
-        break
-    fi
-
-    if [[ "$HAS_MADE_COMMIT" == true ]]; then
-        echo "🎉 Changes committed - task complete"
         break
     fi
 
