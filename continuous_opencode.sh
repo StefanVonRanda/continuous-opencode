@@ -297,7 +297,7 @@ run_opencode() {
         cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"$prompt\""
     fi
 
-    echo "   Working on: $PROMPT"
+    echo "   Running: opencode..."
 
     local spinner=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     local spin_idx=0
@@ -308,24 +308,23 @@ run_opencode() {
     local pid=$!
 
     local start_time=$(date +%s)
-    local last_displayed_time=0
+    local last_status_time=$start_time
 
     while kill -0 $pid 2>/dev/null; do
         local current_time=$(date +%s)
         local elapsed=$((current_time - start_time))
-        local minutes=$((elapsed / 60))
-        local seconds=$((elapsed % 60))
 
-        # Only update display when elapsed time changes
-        if [[ $elapsed -ne $last_displayed_time ]]; then
-            printf "\r   ${spinner[$spin_idx]} Working on: $PROMPT (${minutes}m${seconds}s elapsed)"
-            last_displayed_time=$elapsed
+        # Only print status every 30 seconds
+        if [[ $((current_time - last_status_time)) -ge 30 ]]; then
+            local minutes=$((elapsed / 60))
+            local seconds=$((elapsed % 60))
+            echo "   Still running... (${minutes}m${seconds}s elapsed)"
+            last_status_time=$current_time
         fi
 
-        spin_idx=$(( (spin_idx + 1) % 10 ))
-        sleep 0.1
+        sleep 1
     done
-    printf "\r   ✅ OpenCode finished\n"
+    echo "   ✅ OpenCode finished"
     
     wait $pid || exit_code=$?
     
