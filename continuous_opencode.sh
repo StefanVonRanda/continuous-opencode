@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-CONTINUOUS_OPENCODE_VERSION="0.5.0"
+CONTINUOUS_OPENCODE_VERSION="0.6.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NOTES_FILE="AGENTS.md"
 COMPLETION_SIGNAL="CONTINUOUS_OPENCODE_PROJECT_COMPLETE"
@@ -379,29 +379,55 @@ run_reviewer() {
 }
 
 check_completion() {
-    echo "🔍 Checking if task is complete..."
+    echo "🔍 Analyzing progress and what's left to do..."
 
     if [[ "$DRY_RUN" == true ]]; then
-        echo "   [DRY RUN] Would check completion status"
+        echo "   [DRY RUN] Would check completion status and next steps"
         return 0
     fi
 
     local cmd
     if [[ -n "$OPENCODE_SERVER_URL" ]]; then
-        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase. Is the original task complete? Answer only YES or NO at the very end of your response. Task: $PROMPT\""
+        cmd="opencode run --attach ${OPENCODE_SERVER_URL} ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase.
+
+Provide a brief response in this exact format:
+
+STATUS: YES or NO (is the task complete?)
+REMAINING: [2-3 bullet points of what's left to do, or 'Nothing' if complete]
+
+Task: $PROMPT\""
     else
-        cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase. Is the original task complete? Answer only YES or NO at the very end of your response. Task: $PROMPT\""
+        cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"Analyze the task progress by checking AGENTS.md and the current state of the codebase.
+
+Provide a brief response in this exact format:
+
+STATUS: YES or NO (is the task complete?)
+REMAINING: [2-3 bullet points of what's left to do, or 'Nothing' if complete]
+
+Task: $PROMPT\""
     fi
 
     local output
     output=$(eval "$cmd" 2>&1) || true
 
-    if echo "$output" | grep -qiE "YES$|YES\.|YES,|YES!"; then
+    local status
+    status=$(echo "$output" | grep -iE "^STATUS:" | sed 's/^[Ss][Tt][Aa][Tt][Uu][Ss]:[[:space:]]*//' || true)
+
+    local remaining
+    remaining=$(echo "$output" | sed -n '/^[Rr][Ee][Mm][Aa][Ii][Nn][Ii][Nn][Gg]:/,$p' | sed 's/^[Rr][Ee][Mm][Aa][Ii][Nn][Ii][Nn][Gg]:[[:space:]]*//' || true)
+
+    if echo "$status" | grep -qiE "^YES$|^YES\.|^YES,|^YES!"; then
         COMPLETION_SIGNAL_COUNT=$((COMPLETION_SIGNAL_COUNT + 1))
         echo "   ✨ Task completion confirmed ($COMPLETION_SIGNAL_COUNT/$COMPLETION_THRESHOLD)"
     else
         COMPLETION_SIGNAL_COUNT=0
-        echo "   ℹ️  Task not complete, continuing..."
+        echo "   ℹ️  Task not complete"
+    fi
+
+    if [[ -n "$remaining" && "$remaining" != *"Nothing"* ]]; then
+        echo ""
+        echo "   📋 What's left:"
+        echo "$remaining" | sed 's/^/      /'
     fi
 
     update_cost_tracking
