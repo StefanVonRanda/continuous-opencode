@@ -297,18 +297,34 @@ run_opencode() {
         cmd="opencode run ${OPENCODE_ARGS[@]:-} -- \"$prompt\""
     fi
 
-    echo "   Running: opencode..."
+    echo "   Working on: $PROMPT"
 
     local spinner=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
     local spin_idx=0
     local output_file=$(mktemp)
-    
+
     local exit_code
     (eval "$cmd" >"$output_file" 2>&1) &
     local pid=$!
-    
+
+    local start_time=$(date +%s)
+    local last_update_time=$start_time
+    local update_interval=5  # Update status every 5 seconds
+
     while kill -0 $pid 2>/dev/null; do
-        printf "\r   ${spinner[$spin_idx]} Running OpenCode..."
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        local minutes=$((elapsed / 60))
+        local seconds=$((elapsed % 60))
+
+        # Print periodic status updates
+        if [[ $((current_time - last_update_time)) -ge $update_interval ]]; then
+            printf "\r   ${spinner[$spin_idx]} Working on: $PROMPT (${minutes}m${seconds}s elapsed)"
+            last_update_time=$current_time
+        else
+            printf "\r   ${spinner[$spin_idx]} Working on: $PROMPT"
+        fi
+
         spin_idx=$(( (spin_idx + 1) % 10 ))
         sleep 0.1
     done
