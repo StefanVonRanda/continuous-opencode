@@ -308,8 +308,7 @@ run_opencode() {
     local pid=$!
 
     local start_time=$(date +%s)
-    local last_update_time=$start_time
-    local update_interval=5  # Update status every 5 seconds
+    local last_displayed_time=0
 
     while kill -0 $pid 2>/dev/null; do
         local current_time=$(date +%s)
@@ -317,12 +316,10 @@ run_opencode() {
         local minutes=$((elapsed / 60))
         local seconds=$((elapsed % 60))
 
-        # Print periodic status updates
-        if [[ $((current_time - last_update_time)) -ge $update_interval ]]; then
+        # Only update display when elapsed time changes
+        if [[ $elapsed -ne $last_displayed_time ]]; then
             printf "\r   ${spinner[$spin_idx]} Working on: $PROMPT (${minutes}m${seconds}s elapsed)"
-            last_update_time=$current_time
-        else
-            printf "\r   ${spinner[$spin_idx]} Working on: $PROMPT"
+            last_displayed_time=$elapsed
         fi
 
         spin_idx=$(( (spin_idx + 1) % 10 ))
